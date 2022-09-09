@@ -68,7 +68,13 @@ export async function getRequest(base: string, req: IncomingMessage): Promise<Re
 		delete headers[':authority'];
 		delete headers[':scheme'];
 	}
-	const request = new Request(base + req.url, {
+
+	const matches = req.headers['x-now-route-matches'];
+	const params = new URLSearchParams(matches as string);
+	const pathParam = params.get('1');
+	const url = pathParam ? `/${pathParam}` : req.url;
+
+	const request = new Request(base + url, {
 		method: req.method,
 		headers,
 		body: await get_raw_body(req), // TODO stream rather than buffer

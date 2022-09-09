@@ -43,7 +43,7 @@ export default function vercelEdge(): AstroIntegration {
 			},
 			'astro:build:done': async ({ routes }) => {
 				// Copy necessary files (e.g. node_modules/)
-				await copyDependenciesToFunction(_config.root, functionFolder, serverEntry);
+				await copyDependenciesToFunction(new URL('../..', _config.root), functionFolder, serverEntry);
 
 				// Enable ESM
 				// https://aws.amazon.com/blogs/compute/using-node-js-es-modules-and-top-level-await-in-aws-lambda/
@@ -57,7 +57,19 @@ export default function vercelEdge(): AstroIntegration {
 					runtime: getRuntime(),
 					handler: serverEntry,
 					launcherType: 'Nodejs',
+					shouldAddHelpers: true
 				});
+
+        // Prerender config
+        // https://vercel.com/docs/build-output-api/v3#vercel-primitives/prerender-functions
+        await writeJson(
+          new URL(`./functions/render.prerender-config.json`, _config.outDir),
+          {
+            expiration: 60,
+            bypassToken: "VeryLongAndVerySecretBypassToken",
+            allowQuery: undefined, // "If undefined each unique query value is cached independently"
+          }
+        );
 
 				// Output configuration
 				// https://vercel.com/docs/build-output-api/v3#build-output-configuration
@@ -66,7 +78,7 @@ export default function vercelEdge(): AstroIntegration {
 					routes: [
 						...getRedirects(routes, _config),
 						{ handle: 'filesystem' },
-						{ src: '/.*', dest: 'render' },
+						{ src: '/(?<path>.*)', dest: '/render' },
 					],
 				});
 			},
